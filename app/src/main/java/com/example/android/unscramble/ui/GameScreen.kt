@@ -48,10 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.android.unscramble.R
 import com.example.android.unscramble.ui.theme.UnscrambleTheme
 
-
 @Composable
-fun GameScreen(modifier: Modifier = Modifier,
-               gameViewModel: GameViewModel = viewModel()
+fun GameScreen(
+    modifier: Modifier = Modifier,
+    gameViewModel: GameViewModel = viewModel()
 ) {
     val gameUiState by gameViewModel.uiState.collectAsState()
     Column(
@@ -60,13 +60,15 @@ fun GameScreen(modifier: Modifier = Modifier,
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
-        GameStatus()
+        GameStatus(
+            wordCount = gameUiState.currentWordCount,
+            score = gameUiState.score
+        )
         GameLayout(
-            currentScrambledWord = gameUiState.currentScrambledWord,
-            userGuess = gameViewModel.userGuess,
             onUserGuessChanged = { gameViewModel.updateUserGuess(it) },
+            userGuess = gameViewModel.userGuess,
             onKeyboardDone = { gameViewModel.checkUserGuess() },
+            currentScrambledWord = gameUiState.currentScrambledWord,
             isGuessWrong = gameUiState.isGuessedWordWrong
         )
         Row(
@@ -76,29 +78,34 @@ fun GameScreen(modifier: Modifier = Modifier,
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             OutlinedButton(
-                onClick = { },
+                onClick = { gameViewModel.skipWord() },
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
                 Text(stringResource(R.string.skip))
             }
-
             Button(
                 modifier = modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .padding(start = 8.dp),
-                onClick = {gameViewModel.checkUserGuess() }
+                onClick = { gameViewModel.checkUserGuess() }
             ) {
                 Text(stringResource(R.string.submit))
             }
+        }
+        if (gameUiState.isGameOver) {
+            FinalScoreDialog(
+                score = gameUiState.score,
+                onPlayAgain = { gameViewModel.resetGame() }
+            )
         }
     }
 }
 
 @Composable
-fun GameStatus(modifier: Modifier = Modifier) {
+fun GameStatus(wordCount: Int, score: Int, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -106,31 +113,31 @@ fun GameStatus(modifier: Modifier = Modifier) {
             .size(48.dp),
     ) {
         Text(
-            text = stringResource(R.string.word_count, 1),
+            text = stringResource(R.string.word_count, wordCount),
             fontSize = 18.sp,
         )
         Text(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentWidth(Alignment.End),
-            text = stringResource(R.string.score, 0),
+            text = stringResource(R.string.score, score),
             fontSize = 18.sp,
         )
     }
 }
 
 @Composable
-fun GameLayout(currentScrambledWord: String,
-               isGuessWrong: Boolean,
-               userGuess: String,
-               onUserGuessChanged: (String) -> Unit,
-               onKeyboardDone: () -> Unit,
-               modifier: Modifier = Modifier
+fun GameLayout(
+    currentScrambledWord: String,
+    isGuessWrong: Boolean,
+    userGuess: String,
+    onUserGuessChanged: (String) -> Unit,
+    onKeyboardDone: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-
-        ) {
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
         Text(
             text = currentScrambledWord,
             fontSize = 45.sp,
@@ -146,12 +153,14 @@ fun GameLayout(currentScrambledWord: String,
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             onValueChange = onUserGuessChanged,
-            label = { if (isGuessWrong) {
-                Text(stringResource(R.string.wrong_guess))
-            } else {
-                Text(stringResource(R.string.enter_your_word))
-            } },
-            isError = false,
+            label = {
+                if (isGuessWrong) {
+                    Text(stringResource(R.string.wrong_guess))
+                } else {
+                    Text(stringResource(R.string.enter_your_word))
+                }
+            },
+            isError = isGuessWrong,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Done
             ),
@@ -167,6 +176,7 @@ fun GameLayout(currentScrambledWord: String,
  */
 @Composable
 private fun FinalScoreDialog(
+    score: Int,
     onPlayAgain: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -179,7 +189,7 @@ private fun FinalScoreDialog(
             // onCloseRequest.
         },
         title = { Text(stringResource(R.string.congratulations)) },
-        text = { Text(stringResource(R.string.you_scored, 0)) },
+        text = { Text(stringResource(R.string.you_scored, score)) },
         modifier = modifier,
         dismissButton = {
             TextButton(
@@ -191,9 +201,7 @@ private fun FinalScoreDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onPlayAgain
-            ) {
+            TextButton(onClick = onPlayAgain) {
                 Text(text = stringResource(R.string.play_again))
             }
         }
@@ -202,7 +210,7 @@ private fun FinalScoreDialog(
 
 @Preview(showBackground = true)
 @Composable
-fun DefaultPreview() {
+fun GameScreenPreview() {
     UnscrambleTheme {
         GameScreen()
     }
